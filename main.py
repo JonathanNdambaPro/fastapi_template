@@ -1,11 +1,16 @@
-from fastapi import FastAPI, Query
-from pydantic import BaseModel, Field, ValidationError, validator
+from fastapi import FastAPI, Query, Depends
+from pydantic import BaseModel, Field, validator
 import typing as t
 import logging
 import re
 import error_api
+from routers import operation_data_base
+from routers import operation_cloud_storage
+from routers.operation_data_base import get_keys_auth
 
 app = FastAPI()
+app.include_router(operation_data_base.router)
+app.include_router(operation_cloud_storage.router)
 logger = logging.getLogger("FastAPI bhp")
 
 logging.basicConfig()
@@ -41,7 +46,8 @@ class BodyUploadUnzipFiles(BaseModel):
          summary="Unzip and upload bhp data",
          description="Unzip and upload bhp data in the bucket "
                      "sknow-gcs-landing-eu-dv/Econnect/bhp/type_bhp/date/json/name_of_file",
-         tags=["bhp"]
+         tags=["bhp"],
+         response_description="response to signal the operaton have been successfully achieved"
          )
 def get_upload_unzip_file(type_bhp: str = Query(min_length=4, max_length=10, title="Project from bhp string",
                                                 description="Define the name of project in bhp we want to extract",
@@ -73,3 +79,16 @@ def post_upload_unzip_file(event_request: BodyUploadUnzipFiles) -> t.Dict:
     - **date**: date of when the extract have been executed. format YYYY-MM-DD
     """
     return {"code": "done"}
+
+@app.get("/auth/",
+          summary="return auth keys",
+          tags=["auth"]
+          )
+def get_auth_keys(dict_keys: t.Dict = Depends(get_keys_auth)) -> t.Dict:
+    """
+    unzip and upload file from sknow-gcs-landing-eu-dv/Econnect/bhp/type_bhp/date/zip/name_of_file to sknow-gcs-landing-eu-dv/Econnect/bhp/type_bhp/date/json/name_of_file""
+
+    - **type_bhp**: name of project in bhp we want to extract
+    - **date**: date of when the extract have been executed. format YYYY-MM-DD
+    """
+    return dict_keys
